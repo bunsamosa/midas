@@ -44,7 +44,7 @@
     "chai": "^4.3.7",
     "chalk": "^4.1.2",
     "dotenv": "^16.4.5",
-    "ethers": "^6.11.1",
+    "ethers": "^6.13.4",
     "fhenix-hardhat-docker": "0.2.2",
     "fhenix-hardhat-plugin": "0.2.2-alpha.0",
     "fhenix-hardhat-network": "0.2.3-alpha.0",

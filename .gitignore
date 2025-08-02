@@ -1,0 +1,10 @@
+node_modules
+
+/.cache
+/build
+.env
+*/artifacts
+*/cache
+*/coverage
+*/deployments
+*/types

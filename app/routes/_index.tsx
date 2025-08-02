@@ -1,15 +1,26 @@
-import { DynamicContextProvider, DynamicWidget } from '@dynamic-labs/sdk-react-core';
+import { DynamicWidget, useDynamicContext } from '@dynamic-labs/sdk-react-core';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'components/ui/card';
+import { Button } from 'components/ui/button';
 import { 
   TrendingUp, 
-  Shield, 
   Zap, 
   BarChart3, 
-  Wallet, 
-  Lock
+  CheckCircle
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function Index() {
+  const { user, primaryWallet } = useDynamicContext();
+  const navigate = useNavigate();
+
+  const handleGoToDashboard = () => {
+    navigate('/home');
+  };
+
+  const formatAddress = (address: string) => {
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
+
   return (
     <div className="min-h-screen bg-white">
       {/* Centered Title, Subtitle, and Button */}
@@ -22,8 +33,23 @@ export default function Index() {
             Your intelligent financial assistant. Track net worth, optimize spending power, 
             and make smarter financial decisions with AI-powered insights.
           </p>
-          <div className="flex justify-center">
-            <DynamicWidget />
+          <div className="flex flex-col items-center space-y-4">
+            {user ? (
+              <>
+                <div className="flex items-center space-x-2 bg-green-50 border border-green-200 rounded-lg px-4 py-2">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <span className="text-green-800 font-medium">Connected: {formatAddress(primaryWallet?.address || '')}</span>
+                </div>
+                <Button 
+                  onClick={handleGoToDashboard}
+                  className="px-8 py-3 bg-gray-900 hover:bg-gray-800 text-white text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+                >
+                  Go to Dashboard
+                </Button>
+              </>
+            ) : (
+              <DynamicWidget />
+            )}
           </div>
         </div>
         
@@ -120,7 +146,6 @@ export default function Index() {
         </div>
       </div>
 
-
       {/* CTA Section */}
       <div className="py-20 bg-gray-900">
         <div className="max-w-3xl mx-auto px-6 text-center">
@@ -130,8 +155,23 @@ export default function Index() {
           <p className="text-lg text-gray-300 mb-8">
             Connect your wallet and start managing your finances today
           </p>
-          <div className="flex justify-center">
-            <DynamicWidget />
+          <div className="flex flex-col items-center space-y-4">
+            {user ? (
+              <>
+                <div className="flex items-center space-x-2 bg-green-50 border border-green-200 rounded-lg px-4 py-2">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <span className="text-green-800 font-medium">Connected: {formatAddress(primaryWallet?.address || '')}</span>
+                </div>
+                <Button 
+                  onClick={handleGoToDashboard}
+                  className="px-8 py-3 bg-white text-gray-900 hover:bg-gray-100 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+                >
+                  Go to Dashboard
+                </Button>
+              </>
+            ) : (
+              <DynamicWidget />
+            )}
           </div>
         </div>
       </div>

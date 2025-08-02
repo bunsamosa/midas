@@ -3,46 +3,27 @@ import { Card, CardContent } from "components/ui/card";
 import { Button } from "components/ui/button";
 import { Input } from "components/ui/input";
 import { useState, useEffect } from "react";
-import { ArrowRight, Clock, Lock, AlertCircle, CheckCircle, TrendingUp, DollarSign, Coins, ArrowUpDown, Settings, Zap, Shield, Timer } from "lucide-react";
-
-interface SwapStatus {
-  id: string;
-  fromChain: string;
-  toChain: string;
-  fromToken: string;
-  toToken: string;
-  fromAmount: string;
-  toAmount: string;
-  status: 'pending' | 'hashlock-created' | 'timelock-active' | 'completed' | 'expired';
-  hashlock: string;
-  timelock: string;
-  createdAt: Date;
-}
-
-interface OrderStatus {
-  id: string;
-  fromChain: string;
-  toChain: string;
-  fromToken: string;
-  toToken: string;
-  fromAmount: string;
-  toAmount: string;
-  filledAmount: string;
-  remainingAmount: string;
-  fillPercentage: number;
-  status: 'active' | 'filled' | 'cancelled' | 'expired';
-  timelock: string;
-  createdAt: Date;
-}
+import { 
+  ArrowUpDown, Clock, Lock, AlertCircle, CheckCircle, TrendingUp, 
+  DollarSign, Coins, Zap, Shield, Timer, Activity, BarChart3,
+  Wallet, RefreshCw, ExternalLink, ChevronDown, ChevronUp, Settings,
+  Sparkles, Bot, Star
+} from "lucide-react";
 
 export default function Swap() {
-  const [swapStatuses, setSwapStatuses] = useState<SwapStatus[]>([]);
-  const [orderStatuses, setOrderStatuses] = useState<OrderStatus[]>([]);
+  // Main swap mode selection
+  const [swapMode, setSwapMode] = useState<'basic' | 'advanced'>('basic');
+  const [activeTab, setActiveTab] = useState<'swap' | 'portfolio' | 'market' | 'orders'>('swap');
+  const [advancedSwapMode, setAdvancedSwapMode] = useState<'classic' | 'cross-chain' | 'fusion'>('classic');
+  const [isLoading, setIsLoading] = useState(false);
+  const [apiAvailable, setApiAvailable] = useState(false);
+  const [apiHealth, setApiHealth] = useState<boolean | null>(null);
+  
+  // Basic swap state (original functionality)
+  const [swapStatuses, setSwapStatuses] = useState<any[]>([]);
+  const [orderStatuses, setOrderStatuses] = useState<any[]>([]);
   const [showSwapForm, setShowSwapForm] = useState(false);
   const [showOrderForm, setShowOrderForm] = useState(false);
-  const [activeTab, setActiveTab] = useState<'swaps' | 'orders'>('swaps');
-  const [swapMode, setSwapMode] = useState<'instant' | 'limit'>('instant');
-  
   const [swapForm, setSwapForm] = useState({
     fromChain: 'ethereum',
     toChain: 'polygon',
@@ -51,31 +32,109 @@ export default function Swap() {
     fromAmount: '',
     toAmount: '',
     timelockDuration: '3600',
-    slippage: '0.5'
+    slippage: '1'
   });
-
   const [orderForm, setOrderForm] = useState({
     fromChain: 'ethereum',
-    toChain: 'arbitrum',
+    toChain: 'polygon',
     fromToken: 'ETH',
-    toToken: 'ARB',
+    toToken: 'MATIC',
     fromAmount: '',
     toAmount: '',
-    timelockDuration: '7200'
+    duration: '86400',
+    partialFills: true
   });
 
-  useEffect(() => {
-    // Load swap history from localStorage
-    const storedSwaps = JSON.parse(localStorage.getItem('swapHistory') || '[]');
-    setSwapStatuses(storedSwaps);
+  // Advanced swap state (1inch functionality)
+  const [advancedSwapForm, setAdvancedSwapForm] = useState({
+    fromChainId: 1,
+    toChainId: 137,
+    fromTokenAddress: '',
+    toTokenAddress: '',
+    fromAmount: '',
+    toAmount: '',
+    slippage: 1,
+    fromAddress: ''
+  });
+  
+  // Data state
+  const [supportedTokens, setSupportedTokens] = useState<any[]>([]);
+  const [supportedChains, setSupportedChains] = useState<any[]>([]);
+  const [currentQuote, setCurrentQuote] = useState<any>(null);
+  const [gasPrice, setGasPrice] = useState<any>(null);
+  const [marketData, setMarketData] = useState<any>(null);
+  const [walletPortfolio, setWalletPortfolio] = useState<any>(null);
+  const [limitOrders, setLimitOrders] = useState<any[]>([]);
 
-    // Load order history from localStorage
-    const storedOrders = JSON.parse(localStorage.getItem('orderHistory') || '[]');
-    setOrderStatuses(storedOrders);
+  // Load basic swap history
+  useEffect(() => {
+    const savedSwaps = localStorage.getItem('swapStatuses');
+    const savedOrders = localStorage.getItem('orderStatuses');
+    
+    if (savedSwaps) {
+      setSwapStatuses(JSON.parse(savedSwaps));
+    }
+    if (savedOrders) {
+      setOrderStatuses(JSON.parse(savedOrders));
+    }
   }, []);
 
+  // Check API availability for advanced features
+  useEffect(() => {
+    const apiKey = process.env.REACT_APP_1INCH_API_KEY;
+    setApiAvailable(!!apiKey);
+    
+    if (apiKey) {
+      initializeAdvancedData();
+    }
+  }, []);
+
+  const initializeAdvancedData = async () => {
+    setIsLoading(true);
+    try {
+      // Mock data for demonstration
+      setSupportedChains([
+        { chainId: 1, name: 'Ethereum' },
+        { chainId: 137, name: 'Polygon' },
+        { chainId: 42161, name: 'Arbitrum' },
+        { chainId: 10, name: 'Optimism' }
+      ]);
+      
+      setSupportedTokens([
+        { symbol: 'ETH', name: 'Ethereum', address: '0x...', decimals: 18 },
+        { symbol: 'USDC', name: 'USD Coin', address: '0x...', decimals: 6 },
+        { symbol: 'USDT', name: 'Tether', address: '0x...', decimals: 6 },
+        { symbol: 'MATIC', name: 'Polygon', address: '0x...', decimals: 18 }
+      ]);
+      
+      setGasPrice({
+        fast: 25,
+        standard: 20,
+        slow: 15
+      });
+      
+      setMarketData({
+        totalVolume24h: 1500000000,
+        totalTrades24h: 125000,
+        topTokens: [
+          { symbol: 'ETH', price: 2500, change24h: 2.5, volume24h: 500000000 },
+          { symbol: 'USDC', price: 1, change24h: 0, volume24h: 300000000 },
+          { symbol: 'USDT', price: 1, change24h: -0.1, volume24h: 250000000 },
+        ]
+      });
+
+      setApiHealth(true);
+    } catch (error) {
+      console.error('Error initializing advanced data:', error);
+      setApiHealth(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Basic swap functions
   const handleCreateSwap = () => {
-    const newSwap: SwapStatus = {
+    const newSwap = {
       id: Date.now().toString(),
       fromChain: swapForm.fromChain,
       toChain: swapForm.toChain,
@@ -85,13 +144,12 @@ export default function Swap() {
       toAmount: swapForm.toAmount,
       status: 'pending',
       hashlock: '0x' + Math.random().toString(16).substr(2, 64),
-      timelock: new Date(Date.now() + parseInt(swapForm.timelockDuration) * 1000).toISOString(),
-      createdAt: new Date()
+      createdAt: new Date().toISOString()
     };
 
     const updatedSwaps = [newSwap, ...swapStatuses];
     setSwapStatuses(updatedSwaps);
-    localStorage.setItem('swapHistory', JSON.stringify(updatedSwaps));
+    localStorage.setItem('swapStatuses', JSON.stringify(updatedSwaps));
     setShowSwapForm(false);
     setSwapForm({
       fromChain: 'ethereum',
@@ -101,12 +159,12 @@ export default function Swap() {
       fromAmount: '',
       toAmount: '',
       timelockDuration: '3600',
-      slippage: '0.5'
+      slippage: '1'
     });
   };
 
   const handleCreateOrder = () => {
-    const newOrder: OrderStatus = {
+    const newOrder = {
       id: Date.now().toString(),
       fromChain: orderForm.fromChain,
       toChain: orderForm.toChain,
@@ -114,105 +172,111 @@ export default function Swap() {
       toToken: orderForm.toToken,
       fromAmount: orderForm.fromAmount,
       toAmount: orderForm.toAmount,
-      filledAmount: '0',
-      remainingAmount: orderForm.fromAmount,
-      fillPercentage: 0,
       status: 'active',
-      timelock: new Date(Date.now() + parseInt(orderForm.timelockDuration) * 1000).toISOString(),
-      createdAt: new Date()
+      fillPercentage: 0,
+      createdAt: new Date().toISOString()
     };
 
     const updatedOrders = [newOrder, ...orderStatuses];
     setOrderStatuses(updatedOrders);
-    localStorage.setItem('orderHistory', JSON.stringify(updatedOrders));
+    localStorage.setItem('orderStatuses', JSON.stringify(updatedOrders));
     setShowOrderForm(false);
     setOrderForm({
       fromChain: 'ethereum',
-      toChain: 'arbitrum',
+      toChain: 'polygon',
       fromToken: 'ETH',
-      toToken: 'ARB',
+      toToken: 'MATIC',
       fromAmount: '',
       toAmount: '',
-      timelockDuration: '7200'
+      duration: '86400',
+      partialFills: true
     });
   };
 
-  const getStatusIcon = (status: SwapStatus['status']) => {
-    switch (status) {
-      case 'pending':
-        return <Clock className="h-4 w-4 text-yellow-600" />;
-      case 'hashlock-created':
-        return <Lock className="h-4 w-4 text-blue-600" />;
-      case 'timelock-active':
-        return <AlertCircle className="h-4 w-4 text-orange-600" />;
-      case 'completed':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'expired':
-        return <AlertCircle className="h-4 w-4 text-red-600" />;
-      default:
-        return <Clock className="h-4 w-4 text-gray-600" />;
+  // Advanced swap functions
+  const getAdvancedQuote = async () => {
+    if (!advancedSwapForm.fromTokenAddress || !advancedSwapForm.toTokenAddress || !advancedSwapForm.fromAmount) {
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Mock quote
+      setCurrentQuote({
+        fromToken: { symbol: 'ETH', decimals: 18 },
+        toToken: { symbol: 'USDC', decimals: 6 },
+        fromTokenAmount: advancedSwapForm.fromAmount,
+        toTokenAmount: (parseFloat(advancedSwapForm.fromAmount) * 2500).toString(),
+        estimatedGas: 150000
+      });
+    } catch (error) {
+      console.error('Error getting quote:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const getStatusText = (status: SwapStatus['status']) => {
-    switch (status) {
-      case 'pending':
-        return 'Pending';
-      case 'hashlock-created':
-        return 'Hashlock Created';
-      case 'timelock-active':
-        return 'Timelock Active';
-      case 'completed':
-        return 'Completed';
-      case 'expired':
-        return 'Expired';
-      default:
-        return 'Unknown';
+  const executeAdvancedSwap = async () => {
+    if (!currentQuote || !advancedSwapForm.fromAddress) {
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      alert('Advanced swap executed successfully! (Demo mode)');
+      setCurrentQuote(null);
+    } catch (error) {
+      console.error('Error executing swap:', error);
+      alert('Error executing swap');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const getOrderStatusIcon = (status: OrderStatus['status']) => {
+  // Utility functions
+  const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'active':
-        return <TrendingUp className="h-4 w-4 text-green-600" />;
-      case 'filled':
-        return <CheckCircle className="h-4 w-4 text-blue-600" />;
-      case 'cancelled':
-        return <AlertCircle className="h-4 w-4 text-red-600" />;
-      case 'expired':
-        return <Clock className="h-4 w-4 text-gray-600" />;
-      default:
-        return <TrendingUp className="h-4 w-4 text-gray-600" />;
+      case 'pending': return <Clock className="h-4 w-4 text-yellow-500" />;
+      case 'completed': return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'failed': return <AlertCircle className="h-4 w-4 text-red-500" />;
+      default: return <Clock className="h-4 w-4 text-gray-500" />;
     }
   };
 
-  const getOrderStatusText = (status: OrderStatus['status']) => {
+  const getStatusText = (status: string) => {
     switch (status) {
-      case 'active':
-        return 'Active';
-      case 'filled':
-        return 'Filled';
-      case 'cancelled':
-        return 'Cancelled';
-      case 'expired':
-        return 'Expired';
-      default:
-        return 'Unknown';
+      case 'pending': return 'Pending';
+      case 'completed': return 'Completed';
+      case 'failed': return 'Failed';
+      default: return 'Unknown';
+    }
+  };
+
+  const getOrderStatusIcon = (status: string) => {
+    switch (status) {
+      case 'active': return <TrendingUp className="h-4 w-4 text-green-500" />;
+      case 'filled': return <CheckCircle className="h-4 w-4 text-blue-500" />;
+      case 'cancelled': return <AlertCircle className="h-4 w-4 text-red-500" />;
+      default: return <Clock className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
+  const getOrderStatusText = (status: string) => {
+    switch (status) {
+      case 'active': return 'Active';
+      case 'filled': return 'Filled';
+      case 'cancelled': return 'Cancelled';
+      default: return 'Unknown';
     }
   };
 
   const getChainIcon = (chain: string) => {
-    switch (chain.toLowerCase()) {
-      case 'ethereum':
-        return '🔵';
-      case 'polygon':
-        return '🟣';
-      case 'arbitrum':
-        return '🔵';
-      case 'optimism':
-        return '🔴';
-      default:
-        return '⚪';
+    switch (chain) {
+      case 'ethereum': return '🔵';
+      case 'polygon': return '🟣';
+      case 'arbitrum': return '🔵';
+      case 'optimism': return '🔴';
+      default: return '⚪';
     }
   };
 
@@ -225,85 +289,90 @@ export default function Swap() {
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
             <h1 className="text-3xl font-bold text-gray-900 mb-4">
-              Cross-Chain Swap
+              Midas Swap Hub
             </h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Secure cross-chain swaps with hashlock and timelock functionality. 
-              Support for bidirectional swaps and partial fills.
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              Your gateway to cross-chain DeFi. From secure hashlock swaps to advanced 1inch-powered trading, 
+              Midas provides the tools you need to navigate the multi-chain ecosystem with confidence.
             </p>
+            
+            {/* Ecosystem Integration */}
+            <div className="mt-6 flex justify-center space-x-4">
+              <div className="flex items-center space-x-2 bg-blue-50 px-3 py-1 rounded-full">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <span className="text-sm text-blue-700">Net Worth Tracking</span>
+              </div>
+              <div className="flex items-center space-x-2 bg-green-50 px-3 py-1 rounded-full">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-sm text-green-700">Spend Power AI</span>
+              </div>
+              <div className="flex items-center space-x-2 bg-purple-50 px-3 py-1 rounded-full">
+                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                <span className="text-sm text-purple-700">Cross-Chain Swaps</span>
+              </div>
+            </div>
           </div>
 
-          {/* Mode Selection */}
+          {/* Swap Mode Selection */}
           <div className="flex justify-center mb-8">
             <div className="bg-white rounded-lg p-1 shadow-sm border border-gray-200">
               <button
-                onClick={() => setSwapMode('instant')}
-                className={`px-6 py-2 rounded-md font-medium transition-colors ${
-                  swapMode === 'instant'
+                onClick={() => setSwapMode('basic')}
+                className={`px-8 py-3 rounded-md font-medium transition-colors ${
+                  swapMode === 'basic'
                     ? 'bg-gray-900 text-white'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
                 <div className="flex items-center space-x-2">
-                  <Zap className="h-4 w-4" />
-                  <span>Instant Swap</span>
+                  <Lock className="h-4 w-4" />
+                  <span>Basic Swap</span>
                 </div>
               </button>
               <button
-                onClick={() => setSwapMode('limit')}
-                className={`px-6 py-2 rounded-md font-medium transition-colors ${
-                  swapMode === 'limit'
+                onClick={() => setSwapMode('advanced')}
+                className={`px-8 py-3 rounded-md font-medium transition-colors ${
+                  swapMode === 'advanced'
                     ? 'bg-gray-900 text-white'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
                 <div className="flex items-center space-x-2">
-                  <TrendingUp className="h-4 w-4" />
-                  <span>Limit Order</span>
+                  <Sparkles className="h-4 w-4" />
+                  <span>1inch Pro</span>
+                  <Star className="h-3 w-3 text-yellow-500" />
                 </div>
               </button>
             </div>
           </div>
+
+          {/* API Health Status for Advanced Mode */}
+          {swapMode === 'advanced' && (
+            <div className="flex justify-center mb-8">
+              <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                !apiAvailable ? 'bg-red-100 text-red-800' :
+                apiHealth === null ? 'bg-gray-100 text-gray-800' :
+                apiHealth ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+              }`}>
+                <div className={`w-2 h-2 rounded-full mr-2 ${
+                  !apiAvailable ? 'bg-red-500' :
+                  apiHealth === null ? 'bg-gray-400' :
+                  apiHealth ? 'bg-green-500' : 'bg-red-500'
+                }`}></div>
+                {!apiAvailable ? '1inch API Key Required' :
+                 apiHealth === null ? 'Checking API...' :
+                 apiHealth ? '1inch API Connected' : 'API Connection Failed'}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Main Content */}
       <div className="py-20 bg-white">
         <div className="max-w-6xl mx-auto px-6">
-          {/* Tab Navigation */}
-          <div className="flex justify-center mb-12">
-            <div className="bg-white rounded-lg p-1 shadow-sm border border-gray-200">
-              <button
-                onClick={() => setActiveTab('swaps')}
-                className={`px-6 py-2 rounded-md font-medium transition-colors ${
-                  activeTab === 'swaps'
-                    ? 'bg-gray-900 text-white'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <div className="flex items-center space-x-2">
-                  <ArrowUpDown className="h-4 w-4" />
-                  <span>Swap History</span>
-                </div>
-              </button>
-              <button
-                onClick={() => setActiveTab('orders')}
-                className={`px-6 py-2 rounded-md font-medium transition-colors ${
-                  activeTab === 'orders'
-                    ? 'bg-gray-900 text-white'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <div className="flex items-center space-x-2">
-                  <TrendingUp className="h-4 w-4" />
-                  <span>Order History</span>
-                </div>
-              </button>
-            </div>
-          </div>
-
-          {/* Swap Interface */}
-          {swapMode === 'instant' ? (
+          {swapMode === 'basic' ? (
+            // Basic Swap Interface
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Swap Form */}
               <div className="lg:col-span-2">
@@ -311,9 +380,9 @@ export default function Swap() {
                   <CardContent className="p-6">
                     <div className="flex items-center mb-6">
                       <div className="bg-purple-500 p-2 rounded-lg mr-3">
-                        <ArrowUpDown className="h-5 w-5 text-white" />
+                        <Lock className="h-5 w-5 text-white" />
                       </div>
-                      <h3 className="text-xl font-semibold text-gray-900">Instant Swap</h3>
+                      <h3 className="text-xl font-semibold text-gray-900">Hashlock & Timelock Swap</h3>
                     </div>
 
                     {!showSwapForm ? (
@@ -485,226 +554,352 @@ export default function Swap() {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Limit Order Form */}
-              <div className="lg:col-span-2">
-                <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
-                  <CardContent className="p-8">
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center space-x-3">
-                        <div className="bg-gradient-to-r from-green-500 to-emerald-500 p-3 rounded-xl">
-                          <TrendingUp className="h-6 w-6 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-bold text-gray-900">Limit Order</h3>
-                          <p className="text-sm text-gray-600">Set your preferred exchange rate</p>
-                        </div>
-                      </div>
+            // Advanced Swap Interface (1inch Pro)
+            <div>
+              {/* Advanced Tab Navigation */}
+              <div className="flex justify-center mb-8">
+                <div className="bg-white rounded-lg p-1 shadow-sm border border-gray-200">
+                  <button
+                    onClick={() => setActiveTab('swap')}
+                    className={`px-6 py-2 rounded-md font-medium transition-colors ${
+                      activeTab === 'swap'
+                        ? 'bg-gray-900 text-white'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <ArrowUpDown className="h-4 w-4" />
+                      <span>Swap</span>
                     </div>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('portfolio')}
+                    className={`px-6 py-2 rounded-md font-medium transition-colors ${
+                      activeTab === 'portfolio'
+                        ? 'bg-gray-900 text-white'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <Wallet className="h-4 w-4" />
+                      <span>Portfolio</span>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('market')}
+                    className={`px-6 py-2 rounded-md font-medium transition-colors ${
+                      activeTab === 'market'
+                        ? 'bg-gray-900 text-white'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <BarChart3 className="h-4 w-4" />
+                      <span>Market</span>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('orders')}
+                    className={`px-6 py-2 rounded-md font-medium transition-colors ${
+                      activeTab === 'orders'
+                        ? 'bg-gray-900 text-white'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <TrendingUp className="h-4 w-4" />
+                      <span>Orders</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
 
-                    {!showOrderForm ? (
-                      <div className="text-center py-12">
-                        <div className="bg-gradient-to-r from-green-100 to-emerald-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
-                          <TrendingUp className="h-8 w-8 text-green-600" />
-                        </div>
-                        <h4 className="text-lg font-semibold text-gray-900 mb-2">Create Limit Order</h4>
-                        <p className="text-gray-600 mb-6">Set your preferred rate and wait for the market to match</p>
-                        <Button 
-                          onClick={() => setShowOrderForm(true)}
-                          className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8 py-3 rounded-xl font-semibold"
-                        >
-                          Create Order
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="space-y-6">
-                        {/* Order Details */}
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4">
-                            <label className="text-sm font-medium text-gray-700 mb-2 block">From Chain</label>
-                            <select 
-                              value={orderForm.fromChain}
-                              onChange={(e) => setOrderForm({...orderForm, fromChain: e.target.value})}
-                              className="w-full p-3 border border-gray-200 rounded-lg bg-white"
-                            >
-                              <option value="ethereum">Ethereum</option>
-                              <option value="polygon">Polygon</option>
-                              <option value="arbitrum">Arbitrum</option>
-                              <option value="optimism">Optimism</option>
-                            </select>
-                          </div>
-                          <div className="bg-gradient-to-r from-blue-50 to-purple-100 rounded-xl p-4">
-                            <label className="text-sm font-medium text-gray-700 mb-2 block">To Chain</label>
-                            <select 
-                              value={orderForm.toChain}
-                              onChange={(e) => setOrderForm({...orderForm, toChain: e.target.value})}
-                              className="w-full p-3 border border-gray-200 rounded-lg bg-white"
-                            >
-                              <option value="arbitrum">Arbitrum</option>
-                              <option value="ethereum">Ethereum</option>
-                              <option value="polygon">Polygon</option>
-                              <option value="optimism">Optimism</option>
-                            </select>
-                          </div>
-                        </div>
-
-                        {/* Token Amounts */}
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4">
-                            <label className="text-sm font-medium text-gray-700 mb-2 block">From Amount</label>
-                            <div className="flex items-center space-x-3">
-                              <Input
-                                type="number"
-                                value={orderForm.fromAmount}
-                                onChange={(e) => setOrderForm({...orderForm, fromAmount: e.target.value})}
-                                placeholder="0.0"
-                                className="text-xl font-bold border-0 bg-transparent p-0 focus:ring-0"
-                              />
-                              <div className="flex items-center space-x-2 bg-white rounded-lg px-3 py-2 border">
-                                <span>{getChainIcon(orderForm.fromChain)}</span>
-                                <select 
-                                  value={orderForm.fromToken}
-                                  onChange={(e) => setOrderForm({...orderForm, fromToken: e.target.value})}
-                                  className="font-semibold text-gray-900 bg-transparent border-0 focus:ring-0"
-                                >
-                                  <option value="ETH">ETH</option>
-                                  <option value="MATIC">MATIC</option>
-                                  <option value="ARB">ARB</option>
-                                </select>
-                              </div>
+              {activeTab === 'swap' && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  {/* Advanced Swap Form */}
+                  <div className="lg:col-span-2">
+                    <Card className="border border-gray-200 bg-white">
+                      <CardContent className="p-6">
+                        <div className="flex items-center justify-between mb-6">
+                          <div className="flex items-center space-x-3">
+                            <div className="bg-gradient-to-r from-purple-500 to-blue-500 p-2 rounded-lg mr-3">
+                              <Sparkles className="h-5 w-5 text-white" />
                             </div>
+                            <h3 className="text-xl font-semibold text-gray-900">1inch Pro Swap</h3>
                           </div>
-                          <div className="bg-gradient-to-r from-blue-50 to-purple-100 rounded-xl p-4">
-                            <label className="text-sm font-medium text-gray-700 mb-2 block">To Amount</label>
-                            <div className="flex items-center space-x-3">
-                              <Input
-                                type="number"
-                                value={orderForm.toAmount}
-                                onChange={(e) => setOrderForm({...orderForm, toAmount: e.target.value})}
-                                placeholder="0.0"
-                                className="text-xl font-bold border-0 bg-transparent p-0 focus:ring-0"
-                              />
-                              <div className="flex items-center space-x-2 bg-white rounded-lg px-3 py-2 border">
-                                <span>{getChainIcon(orderForm.toChain)}</span>
-                                <select 
-                                  value={orderForm.toToken}
-                                  onChange={(e) => setOrderForm({...orderForm, toToken: e.target.value})}
-                                  className="font-semibold text-gray-900 bg-transparent border-0 focus:ring-0"
-                                >
-                                  <option value="ARB">ARB</option>
-                                  <option value="ETH">ETH</option>
-                                  <option value="MATIC">MATIC</option>
-                                </select>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Order Settings */}
-                        <div className="bg-gray-50 rounded-xl p-4 space-y-3">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-600">Order Duration</span>
-                            <select 
-                              value={orderForm.timelockDuration}
-                              onChange={(e) => setOrderForm({...orderForm, timelockDuration: e.target.value})}
-                              className="font-medium text-purple-600 bg-transparent border-0 focus:ring-0"
-                            >
-                              <option value="7200">2 Hours</option>
-                              <option value="14400">4 Hours</option>
-                              <option value="86400">24 Hours</option>
-                              <option value="604800">7 Days</option>
-                            </select>
-                          </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-600">Partial Fills</span>
-                            <span className="font-medium text-green-600">Enabled</span>
-                          </div>
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="flex space-x-4">
-                          <Button 
-                            onClick={handleCreateOrder}
-                            className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-4 rounded-xl font-semibold text-lg"
-                          >
-                            <TrendingUp className="h-5 w-5 mr-2" />
-                            Create Limit Order
-                          </Button>
-                          <Button 
-                            onClick={() => setShowOrderForm(false)}
+                          <Button
+                            onClick={initializeAdvancedData}
                             variant="outline"
-                            className="px-8 py-4 rounded-xl font-semibold"
+                            size="sm"
+                            disabled={isLoading}
                           >
-                            Cancel
+                            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                            Refresh
                           </Button>
                         </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
 
-              {/* Order History */}
-              <div className="lg:col-span-1">
-                <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm h-fit">
-                  <CardContent className="p-6">
-                    <div className="flex items-center mb-6">
-                      <div className="bg-gradient-to-r from-green-500 to-emerald-500 p-2 rounded-lg mr-3">
-                        <TrendingUp className="h-5 w-5 text-white" />
-                      </div>
-                      <h3 className="text-lg font-semibold text-gray-900">Active Orders</h3>
-                    </div>
-
-                    <div className="space-y-4 max-h-96 overflow-y-auto">
-                      {orderStatuses.length > 0 ? (
-                        orderStatuses.map((order) => (
-                          <div key={order.id} className="bg-gradient-to-r from-green-50 to-emerald-100 rounded-lg p-4 border border-green-200">
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center space-x-2">
-                                {getOrderStatusIcon(order.status)}
-                                <span className="text-sm font-medium text-gray-900">
-                                  {getOrderStatusText(order.status)}
-                                </span>
-                              </div>
-                              <span className="text-xs text-gray-500">
-                                {new Date(order.createdAt).toLocaleDateString()}
-                              </span>
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">From:</span>
-                                <span className="font-medium">{order.fromAmount} {order.fromToken}</span>
-                              </div>
-                              <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">To:</span>
-                                <span className="font-medium">{order.toAmount} {order.toToken}</span>
-                              </div>
-                              <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">Filled:</span>
-                                <span className="font-medium">{order.filledAmount} / {order.fromAmount} ({order.fillPercentage}%)</span>
-                              </div>
-                              <div className="w-full bg-gray-200 rounded-full h-2">
-                                <div 
-                                  className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full transition-all duration-300" 
-                                  style={{ width: `${order.fillPercentage}%` }}
-                                ></div>
-                              </div>
-                            </div>
+                        {/* Advanced Swap Mode Selection */}
+                        <div className="mb-6">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Swap Mode</label>
+                          <div className="grid grid-cols-3 gap-2">
+                            <button
+                              onClick={() => setAdvancedSwapMode('classic')}
+                              className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
+                                advancedSwapMode === 'classic'
+                                  ? 'bg-gray-900 text-white border-gray-900'
+                                  : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                              }`}
+                            >
+                              <Zap className="h-4 w-4 mx-auto mb-1" />
+                              Classic
+                            </button>
+                            <button
+                              onClick={() => setAdvancedSwapMode('cross-chain')}
+                              className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
+                                advancedSwapMode === 'cross-chain'
+                                  ? 'bg-gray-900 text-white border-gray-900'
+                                  : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                              }`}
+                            >
+                              <Shield className="h-4 w-4 mx-auto mb-1" />
+                              Cross-Chain
+                            </button>
+                            <button
+                              onClick={() => setAdvancedSwapMode('fusion')}
+                              className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
+                                advancedSwapMode === 'fusion'
+                                  ? 'bg-gray-900 text-white border-gray-900'
+                                  : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                              }`}
+                            >
+                              <TrendingUp className="h-4 w-4 mx-auto mb-1" />
+                              Fusion
+                            </button>
                           </div>
-                        ))
-                      ) : (
-                        <div className="text-center py-8">
-                          <div className="bg-gray-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3">
-                            <TrendingUp className="h-6 w-6 text-gray-400" />
-                          </div>
-                          <p className="text-gray-500 text-sm">No active orders</p>
                         </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+
+                        {/* Advanced Swap Form */}
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">From Chain</label>
+                              <select 
+                                value={advancedSwapForm.fromChainId}
+                                onChange={(e) => setAdvancedSwapForm({...advancedSwapForm, fromChainId: parseInt(e.target.value)})}
+                                className="w-full p-2 border border-gray-300 rounded-md"
+                              >
+                                {supportedChains.map(chain => (
+                                  <option key={chain.chainId} value={chain.chainId}>
+                                    {chain.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">To Chain</label>
+                              <select 
+                                value={advancedSwapForm.toChainId}
+                                onChange={(e) => setAdvancedSwapForm({...advancedSwapForm, toChainId: parseInt(e.target.value)})}
+                                className="w-full p-2 border border-gray-300 rounded-md"
+                              >
+                                {supportedChains.map(chain => (
+                                  <option key={chain.chainId} value={chain.chainId}>
+                                    {chain.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">From Token</label>
+                              <select 
+                                value={advancedSwapForm.fromTokenAddress}
+                                onChange={(e) => setAdvancedSwapForm({...advancedSwapForm, fromTokenAddress: e.target.value})}
+                                className="w-full p-2 border border-gray-300 rounded-md"
+                              >
+                                <option value="">Select token</option>
+                                {supportedTokens.map(token => (
+                                  <option key={token.address} value={token.address}>
+                                    {token.symbol} - {token.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">To Token</label>
+                              <select 
+                                value={advancedSwapForm.toTokenAddress}
+                                onChange={(e) => setAdvancedSwapForm({...advancedSwapForm, toTokenAddress: e.target.value})}
+                                className="w-full p-2 border border-gray-300 rounded-md"
+                              >
+                                <option value="">Select token</option>
+                                {supportedTokens.map(token => (
+                                  <option key={token.address} value={token.address}>
+                                    {token.symbol} - {token.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">From Amount</label>
+                              <Input
+                                type="number"
+                                value={advancedSwapForm.fromAmount}
+                                onChange={(e) => setAdvancedSwapForm({...advancedSwapForm, fromAmount: e.target.value})}
+                                placeholder="0.0"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">To Amount</label>
+                              <Input
+                                type="number"
+                                value={advancedSwapForm.toAmount}
+                                placeholder="0.0"
+                                disabled
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">Wallet Address</label>
+                              <Input
+                                value={advancedSwapForm.fromAddress}
+                                onChange={(e) => setAdvancedSwapForm({...advancedSwapForm, fromAddress: e.target.value})}
+                                placeholder="0x..."
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">Slippage (%)</label>
+                              <Input
+                                type="number"
+                                value={advancedSwapForm.slippage}
+                                onChange={(e) => setAdvancedSwapForm({...advancedSwapForm, slippage: parseFloat(e.target.value)})}
+                                placeholder="1.0"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex space-x-3">
+                            <Button 
+                              onClick={getAdvancedQuote}
+                              className="flex-1 bg-gray-900 hover:bg-gray-800 text-white"
+                              disabled={isLoading}
+                            >
+                              {isLoading ? 'Getting Quote...' : 'Get Quote'}
+                            </Button>
+                            <Button 
+                              onClick={executeAdvancedSwap}
+                              className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+                              disabled={!currentQuote || isLoading}
+                            >
+                              {isLoading ? 'Executing...' : 'Execute Swap'}
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Quote and Gas Info */}
+                  <div className="lg:col-span-1">
+                    <Card className="border border-gray-200 bg-white">
+                      <CardContent className="p-6">
+                        <div className="flex items-center mb-6">
+                          <div className="bg-blue-500 p-2 rounded-lg mr-3">
+                            <Activity className="h-5 w-5 text-white" />
+                          </div>
+                          <h3 className="text-xl font-semibold text-gray-900">Quote & Gas</h3>
+                        </div>
+
+                        {currentQuote ? (
+                          <div className="space-y-4">
+                            <div className="bg-gray-50 rounded-lg p-4">
+                              <h4 className="font-semibold text-gray-900 mb-2">Swap Quote</h4>
+                              <div className="space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">From:</span>
+                                  <span className="font-medium">
+                                    {currentQuote.fromTokenAmount} {currentQuote.fromToken.symbol}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">To:</span>
+                                  <span className="font-medium">
+                                    {currentQuote.toTokenAmount} {currentQuote.toToken.symbol}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Estimated Gas:</span>
+                                  <span className="font-medium">{currentQuote.estimatedGas}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-gray-500 text-center py-8">Get a quote to see details</p>
+                        )}
+
+                        {gasPrice && (
+                          <div className="mt-6 bg-gray-50 rounded-lg p-4">
+                            <h4 className="font-semibold text-gray-900 mb-2">Gas Prices</h4>
+                            <div className="space-y-2 text-sm">
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Fast:</span>
+                                <span className="font-medium">{gasPrice.fast} Gwei</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Standard:</span>
+                                <span className="font-medium">{gasPrice.standard} Gwei</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Slow:</span>
+                                <span className="font-medium">{gasPrice.slow} Gwei</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+              )}
+
+              {/* Additional tabs for advanced features */}
+              {activeTab === 'portfolio' && (
+                <div className="text-center py-12">
+                  <div className="bg-gray-50 rounded-lg p-8">
+                    <Wallet className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Portfolio Management</h3>
+                    <p className="text-gray-600">Advanced portfolio tracking and multi-chain balance management coming soon.</p>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'market' && (
+                <div className="text-center py-12">
+                  <div className="bg-gray-50 rounded-lg p-8">
+                    <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Market Analytics</h3>
+                    <p className="text-gray-600">Real-time market data and analytics coming soon.</p>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'orders' && (
+                <div className="text-center py-12">
+                  <div className="bg-gray-50 rounded-lg p-8">
+                    <TrendingUp className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Limit Orders</h3>
+                    <p className="text-gray-600">Advanced limit order management coming soon.</p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

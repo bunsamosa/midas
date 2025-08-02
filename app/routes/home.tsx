@@ -1,7 +1,9 @@
 import { Navbar } from "components/Navbar";
 import { Card, CardContent } from "components/ui/card";
-
 import { useState, useEffect } from "react";
+import { TrendingUp, DollarSign, CreditCard, Activity, Clock, AlertCircle } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+
 interface FinancialData {
   dueDate: string;
   totalCreditLimit: number;
@@ -13,8 +15,6 @@ interface FinancialData {
   creditScoreHistory: number[];
   suggestedBudget: number;
 }
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Building2, CreditCard, TrendingUp, Calendar, DollarSign, Percent, Award, Clock, AlertCircle } from "lucide-react";
 
 interface BankAccount {
   name: string;
@@ -26,11 +26,14 @@ interface CreditCard {
   balance: number;
 }
 
+
+
 export default function Home() {
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [financialData, setFinancialData] = useState<FinancialData | null>(null);
   const [ethBalance, setEthBalance] = useState<string | null>(null);
+
 
   useEffect(() => {
     // Fetch bank accounts, credit cards, and financial data from localStorage
@@ -53,6 +56,8 @@ export default function Home() {
     setCreditCards(creditCardsArray);
     setFinancialData(storedFinancialData);
     setEthBalance(storedEthBalance);
+
+
   }, []);
 
   const totalBankBalance = bankAccounts.reduce((sum, account) => sum + account.balance, 0);
@@ -71,6 +76,8 @@ export default function Home() {
       value
     }));
   };
+
+
 
   return (
     <div className="min-h-screen bg-white">
@@ -110,7 +117,7 @@ export default function Home() {
                 <CardContent className="p-6">
                   <div className="flex items-center mb-4">
                     <div className="bg-blue-500 p-2 rounded-lg mr-3">
-                      <Building2 className="h-5 w-5 text-white" />
+                      <DollarSign className="h-5 w-5 text-white" />
                     </div>
                     <h2 className="text-xl font-semibold text-gray-900">Bank Accounts</h2>
                   </div>
@@ -175,14 +182,14 @@ export default function Home() {
                   <CardContent className="p-6">
                     <div className="flex items-center mb-4">
                       <div className="bg-green-500 p-2 rounded-lg mr-3">
-                        <Award className="h-5 w-5 text-white" />
+                        <Activity className="h-5 w-5 text-white" />
                       </div>
                       <h2 className="text-xl font-semibold text-gray-900">Financial Health</h2>
                     </div>
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
-                          <Calendar className="h-4 w-4 text-gray-500 mr-2" />
+                          <Clock className="h-4 w-4 text-gray-500 mr-2" />
                           <span className="text-sm text-gray-600">Due Date</span>
                         </div>
                         <span className="text-sm font-medium text-gray-900">{financialData.dueDate}</span>
@@ -190,20 +197,13 @@ export default function Home() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
                           <DollarSign className="h-4 w-4 text-gray-500 mr-2" />
-                          <span className="text-sm text-gray-600">Credit Limit</span>
-                        </div>
-                        <span className="text-sm font-medium text-gray-900">${financialData.totalCreditLimit.toFixed(2)}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <Percent className="h-4 w-4 text-gray-500 mr-2" />
                           <span className="text-sm text-gray-600">Interest Rate</span>
                         </div>
                         <span className="text-sm font-medium text-gray-900">{financialData.interestRate.toFixed(2)}%</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
-                          <Award className="h-4 w-4 text-gray-500 mr-2" />
+                          <AlertCircle className="h-4 w-4 text-gray-500 mr-2" />
                           <span className="text-sm text-gray-600">Credit Rating</span>
                         </div>
                         <span className="text-sm font-medium text-gray-900">{financialData.creditRating}</span>
@@ -236,7 +236,7 @@ export default function Home() {
                   <CardContent className="p-6">
                     <div className="flex items-center mb-4">
                       <div className="bg-gray-500 p-2 rounded-lg mr-3">
-                        <Award className="h-5 w-5 text-white" />
+                        <Activity className="h-5 w-5 text-white" />
                       </div>
                       <h2 className="text-xl font-semibold text-gray-900">Financial Health</h2>
                     </div>
@@ -249,9 +249,11 @@ export default function Home() {
         </div>
       </div>
 
+
+
       {/* Charts Section */}
       {financialData && (
-        <div className="py-20 bg-white">
+        <div className="py-20 bg-gray-50">
           <div className="max-w-6xl mx-auto px-6">
             <div className="text-center mb-12">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Financial History</h2>
@@ -259,51 +261,51 @@ export default function Home() {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <Card className="border border-gray-200 bg-white">
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Credit Card Balance History</h3>
-                  <div className="h-64 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={formatChartData(financialData.creditCardBalanceHistory)}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                        <XAxis dataKey="month" stroke="#6b7280" />
-                        <YAxis stroke="#6b7280" />
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: '#ffffff', 
-                            border: '1px solid #e5e7eb',
-                            borderRadius: '8px'
-                          }} 
-                        />
-                        <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
+                                <Card className="border border-gray-200 bg-white">
+                    <CardContent className="p-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Credit Card Balance History</h3>
+                      <div className="h-64 w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={formatChartData(financialData.creditCardBalanceHistory)}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                            <XAxis dataKey="month" stroke="#6b7280" />
+                            <YAxis stroke="#6b7280" />
+                            <Tooltip 
+                              contentStyle={{ 
+                                backgroundColor: '#ffffff', 
+                                border: '1px solid #e5e7eb',
+                                borderRadius: '8px'
+                              }} 
+                            />
+                            <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
 
-              <Card className="border border-gray-200 bg-white">
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Credit Score History</h3>
-                  <div className="h-64 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={formatChartData(financialData.creditScoreHistory)}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                        <XAxis dataKey="month" stroke="#6b7280" />
-                        <YAxis stroke="#6b7280" />
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: '#ffffff', 
-                            border: '1px solid #e5e7eb',
-                            borderRadius: '8px'
-                          }} 
-                        />
-                        <Line type="monotone" dataKey="value" stroke="#10b981" strokeWidth={2} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
+                  <Card className="border border-gray-200 bg-white">
+                    <CardContent className="p-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Credit Score History</h3>
+                      <div className="h-64 w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={formatChartData(financialData.creditScoreHistory)}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                            <XAxis dataKey="month" stroke="#6b7280" />
+                            <YAxis stroke="#6b7280" />
+                            <Tooltip 
+                              contentStyle={{ 
+                                backgroundColor: '#ffffff', 
+                                border: '1px solid #e5e7eb',
+                                borderRadius: '8px'
+                              }} 
+                            />
+                            <Line type="monotone" dataKey="value" stroke="#10b981" strokeWidth={2} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
             </div>
           </div>
         </div>

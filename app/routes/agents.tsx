@@ -12,6 +12,20 @@ export default function AgentsPage() {
 
   const agents = [
     {
+      id: "defi-trading",
+      title: "DeFi Trading Agent",
+      description: "Advanced cross-chain trading with AI-powered optimization and risk management",
+      icon: <Sparkles className="h-8 w-8 text-white" />,
+      color: "bg-purple-500",
+      path: "/swap",
+      features: [
+        "1inch DEX aggregation",
+        "Cross-chain swaps",
+        "AI trading recommendations",
+        "Portfolio rebalancing"
+      ]
+    },
+    {
       id: "spend-power",
       title: "Spend Power Agent",
       description: "Optimize your financing options and analyze credit vs loan scenarios",

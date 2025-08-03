@@ -2,7 +2,6 @@ import { Button } from "components/ui/button";
 import { LogOut } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
-import { Star } from "lucide-react";
 
 export function Navbar() {
   const { handleLogOut } = useDynamicContext();
@@ -63,19 +62,8 @@ export function Navbar() {
         >
           Agents
         </NavLink>
-              <NavLink
-        to="/swap"
-        style={{ padding: '0.5rem 0.75rem' }}
-        className={({ isActive }) =>
-          `rounded-md transition-all duration-200 ${
-            isActive
-              ? "font-bold bg-gray-100 text-blue-600"
-              : "hover:bg-gray-100 hover:shadow-md hover:text-blue-600"
-          }`
-        }
-      >
-        Swap
-      </NavLink>
+
+
 
       </div>
       <Button

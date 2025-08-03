@@ -16,12 +16,11 @@ const router = createBrowserRouter([
     path: "/home",
     element: <Home />,
   },
-          {
-          path: "/swap",
-          element: <Swap />,
-        },
+  {
+    path: "/swap",
+    element: <Swap />,
+  },
 
-  // ... other routes ...
 ]);
 
 export default router;

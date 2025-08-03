@@ -128,7 +128,7 @@ export default function Index() {
                 <div className="mx-auto bg-gray-900 p-3 rounded-lg w-fit mb-4">
                   <TrendingUp className="h-6 w-6 text-white" />
                 </div>
-                <CardTitle className="text-xl font-semibold text-gray-900">AI Agents</CardTitle>
+                <CardTitle className="text-xl font-semibold text-gray-900">Midas AI</CardTitle>
                 <CardDescription className="text-gray-600">
                   Intelligent financial guidance
                 </CardDescription>

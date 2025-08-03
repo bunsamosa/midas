@@ -58,6 +58,21 @@ export default function Swap() {
     slippage: 1,
     fromAddress: ''
   });
+
+  // Fusion state
+  const [fusionForm, setFusionForm] = useState({
+    fromChain: 'Ethereum',
+    toChain: 'Etherlink',
+    fromToken: 'USDC',
+    toToken: 'USDC',
+    fromAmount: '',
+    toAmount: '',
+    slippage: 1,
+    walletAddress: ''
+  });
+  
+  const [fusionQuote, setFusionQuote] = useState<any>(null);
+  const [isGettingFusionQuote, setIsGettingFusionQuote] = useState(false);
   
   // Data state
   const [supportedTokens, setSupportedTokens] = useState<any[]>([]);
@@ -602,12 +617,13 @@ export default function Swap() {
   };
 
   const getOrderStatusText = (status: string) => {
-    switch (status) {
-      case 'active': return 'Active';
-      case 'filled': return 'Filled';
-      case 'cancelled': return 'Cancelled';
-      default: return 'Unknown';
-    }
+    const statusMap: Record<string, string> = {
+      'pending': 'Pending',
+      'executed': 'Executed',
+      'cancelled': 'Cancelled',
+      'expired': 'Expired'
+    };
+    return statusMap[status] || status;
   };
 
   const getChainIcon = (chain: string) => {
@@ -618,6 +634,176 @@ export default function Swap() {
       case 'optimism': return '🔴';
       default: return '⚪';
     }
+  };
+
+  // Fusion functions
+  const getFusionQuote = async () => {
+    console.log('Getting Fusion quote for:', fusionForm);
+    
+    if (!fusionForm.fromAmount || !fusionForm.walletAddress) {
+      alert('Please enter amount and wallet address');
+      return;
+    }
+
+    setIsGettingFusionQuote(true);
+    
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Generate dummy quote based on input
+      const amount = parseFloat(fusionForm.fromAmount);
+      let toAmount = amount;
+      let priceImpact = 0.05;
+      let gasEstimate = '150000';
+      let route = 'Etherlink Fusion+';
+      
+      // Calculate based on token types
+      if (fusionForm.fromToken === 'USDC' && fusionForm.toToken === 'USDC') {
+        toAmount = amount; // 1:1 for stablecoins
+        priceImpact = 0.02;
+        gasEstimate = '120000';
+      } else if (fusionForm.fromToken === 'ETH' && fusionForm.toToken === 'USDC') {
+        toAmount = amount * 1800; // ETH to USDC conversion
+        priceImpact = 0.08;
+        gasEstimate = '180000';
+      } else if (fusionForm.fromToken === 'USDT' && fusionForm.toToken === 'USDT') {
+        toAmount = amount; // 1:1 for stablecoins
+        priceImpact = 0.03;
+        gasEstimate = '130000';
+      } else {
+        toAmount = amount * 1.02; // Generic 2% premium
+        priceImpact = 0.15;
+        gasEstimate = '200000';
+      }
+
+      const quote = {
+        fromToken: fusionForm.fromToken,
+        toToken: fusionForm.toToken,
+        fromAmount: fusionForm.fromAmount,
+        toAmount: toAmount.toFixed(4),
+        priceImpact: priceImpact,
+        gasEstimate: gasEstimate,
+        gasPrice: '20',
+        route: route,
+        exchanges: ['Uniswap V3', 'SushiSwap', 'Balancer'],
+        estimatedTime: '2-5 minutes',
+        bridgeFee: '0.001 ETH'
+      };
+
+      setFusionQuote(quote);
+      console.log('Fusion quote generated:', quote);
+      
+    } catch (error) {
+      console.error('Error getting Fusion quote:', error);
+      alert('Error getting quote');
+    } finally {
+      setIsGettingFusionQuote(false);
+    }
+  };
+
+  // Function to update Fusion form with AI recommendation
+  const updateFusionFormWithAIRecommendation = (recommendation: any) => {
+    console.log('Updating Fusion form with AI recommendation:', recommendation);
+    
+    // Parse the recommendation data
+    const fromChain = recommendation.fromChain || 'Ethereum';
+    const toChain = recommendation.toChain || 'Polygon';
+    const fromToken = recommendation.fromToken || 'ETH';
+    const toToken = recommendation.toToken || 'ETH';
+    const amount = recommendation.amount || '1.0';
+    const rate = recommendation.rate || '1.008';
+    
+    // Update the Fusion form
+    setFusionForm({
+      fromChain: fromChain,
+      toChain: toChain,
+      fromToken: fromToken,
+      toToken: toToken,
+      fromAmount: amount,
+      toAmount: (parseFloat(amount) * parseFloat(rate.replace('$', ''))).toFixed(4),
+      slippage: 1, // Default slippage for AI recommendations
+      walletAddress: fusionForm.walletAddress // Keep existing wallet address
+    });
+    
+    // Switch to Etherlink Fusion mode
+    setSwapMode('etherlink');
+    
+    console.log('Fusion form updated with AI recommendation');
+  };
+
+  // Handle AI recommendation execution
+  const handleAIRecommendationExecute = (recommendation: any) => {
+    // Update the Fusion form with AI recommendation data
+    updateFusionFormWithAIRecommendation(recommendation);
+    
+    // Show success message
+    alert('AI recommendation loaded! Form has been updated with the recommended values.');
+  };
+
+  // Execute dummy swap from AI recommendation
+  const executeDummySwap = async (recommendation: any) => {
+    console.log('Executing dummy swap for recommendation:', recommendation);
+    
+    // Show loading state
+    alert('🔄 Executing swap... Please wait.');
+    
+    try {
+      // Simulate swap execution delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Generate dummy transaction hash
+      const txHash = '0x' + Math.random().toString(16).substr(2, 64);
+      
+      // Calculate savings
+      const savings = recommendation.swapDetails?.savings || '$16';
+      const amount = recommendation.swapDetails?.amount || '1.0';
+      const fromToken = recommendation.swapDetails?.from?.split(' ')[0] || 'ETH';
+      const toToken = recommendation.swapDetails?.to?.split(' ')[0] || 'ETH';
+      
+      // Show success message with transaction details
+      alert(`✅ Swap executed successfully!
+      
+📊 Transaction Details:
+• From: ${amount} ${fromToken}
+• To: ${toToken}
+• Savings: ${savings}
+• Transaction Hash: ${txHash}
+• Status: Confirmed
+• Gas Used: 150,000
+• Block: #${Math.floor(Math.random() * 1000000) + 18000000}
+
+🎉 Your arbitrage opportunity has been captured!`);
+      
+      console.log('Dummy swap executed successfully:', {
+        txHash,
+        savings,
+        amount,
+        fromToken,
+        toToken
+      });
+      
+    } catch (error) {
+      console.error('Error executing dummy swap:', error);
+      alert('❌ Swap failed! Please try again.');
+    }
+  };
+
+  const executeFusionSwap = async () => {
+    if (!fusionQuote) {
+      alert('Please get a quote first');
+      return;
+    }
+
+    console.log('Executing Fusion swap:', fusionQuote);
+    
+    // Simulate swap execution
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    alert(`Fusion swap executed successfully!\n\nFrom: ${fusionQuote.fromAmount} ${fusionQuote.fromToken}\nTo: ${fusionQuote.toAmount} ${fusionQuote.toToken}\nRoute: ${fusionQuote.route}\n\nTransaction Hash: 0x${Math.random().toString(16).substr(2, 64)}`);
+    
+    // Reset quote
+    setFusionQuote(null);
   };
 
   return (
@@ -772,13 +958,38 @@ export default function Swap() {
                               className="bg-green-600 hover:bg-green-700 text-white"
                               onClick={() => {
                                 const rec = aiRecommendations[currentRecommendation];
-                                setSwapMode(rec.swapDetails.recommendedMode);
-                                // Pre-fill swap form with AI recommendation
-                                if (rec.swapDetails.recommendedMode === 'advanced') {
+                                console.log('AI recommendation executed:', rec);
+                                
+                                // Execute the dummy swap
+                                executeDummySwap(rec);
+                                
+                                // Also update the form for future use
+                                if (rec.swapDetails.recommendedMode === 'etherlink' || rec.swapDetails.recommendedMode === 'fusion') {
+                                  // Update Fusion form with AI recommendation
+                                  updateFusionFormWithAIRecommendation({
+                                    fromChain: rec.swapDetails.from.split(' ')[1] || 'Ethereum', // Extract chain from "ETH (Ethereum)"
+                                    toChain: rec.swapDetails.to.split(' ')[1] || 'Polygon', // Extract chain from "ETH (Polygon)"
+                                    fromToken: rec.swapDetails.from.split(' ')[0] || 'ETH', // Extract token from "ETH (Ethereum)"
+                                    toToken: rec.swapDetails.to.split(' ')[0] || 'ETH', // Extract token from "ETH (Polygon)"
+                                    amount: rec.swapDetails.amount,
+                                    rate: rec.swapDetails.expectedRate
+                                  });
+                                } else if (rec.swapDetails.recommendedMode === 'advanced') {
+                                  setSwapMode('advanced');
+                                  // Pre-fill advanced swap form with AI recommendation
                                   setAdvancedSwapForm({
                                     ...advancedSwapForm,
                                     fromTokenAddress: rec.swapDetails.from,
                                     toTokenAddress: rec.swapDetails.to,
+                                    fromAmount: rec.swapDetails.amount
+                                  });
+                                } else {
+                                  // Default to basic mode
+                                  setSwapMode('basic');
+                                  setSwapForm({
+                                    ...swapForm,
+                                    fromToken: rec.swapDetails.from,
+                                    toToken: rec.swapDetails.to,
                                     fromAmount: rec.swapDetails.amount
                                   });
                                 }
@@ -1939,20 +2150,31 @@ export default function Swap() {
                         <div className="space-y-4">
                           <label className="block text-sm font-medium text-gray-700">From</label>
                           <div className="space-y-3">
-                            <select className="w-full p-3 border border-gray-300 rounded-lg">
-                              <option value="1">Ethereum</option>
-                              <option value="1284">Etherlink</option>
+                            <select 
+                              className="w-full p-3 border border-gray-300 rounded-lg"
+                              value={fusionForm.fromChain}
+                              onChange={(e) => setFusionForm({...fusionForm, fromChain: e.target.value})}
+                            >
+                              <option value="Ethereum">Ethereum</option>
+                              <option value="Etherlink">Etherlink</option>
                             </select>
-                            <select className="w-full p-3 border border-gray-300 rounded-lg">
+                            <select 
+                              className="w-full p-3 border border-gray-300 rounded-lg"
+                              value={fusionForm.fromToken}
+                              onChange={(e) => setFusionForm({...fusionForm, fromToken: e.target.value})}
+                            >
                               <option value="USDC">USDC</option>
                               <option value="USDT">USDT</option>
                               <option value="DAI">DAI</option>
+                              <option value="ETH">ETH</option>
                               <option value="WETH">WETH</option>
                             </select>
                             <Input
                               type="number"
                               placeholder="Amount"
                               className="w-full"
+                              value={fusionForm.fromAmount}
+                              onChange={(e) => setFusionForm({...fusionForm, fromAmount: e.target.value})}
                             />
                           </div>
                         </div>
@@ -1961,14 +2183,23 @@ export default function Swap() {
                         <div className="space-y-4">
                           <label className="block text-sm font-medium text-gray-700">To</label>
                           <div className="space-y-3">
-                            <select className="w-full p-3 border border-gray-300 rounded-lg">
-                              <option value="1284">Etherlink</option>
-                              <option value="1">Ethereum</option>
+                            <select 
+                              className="w-full p-3 border border-gray-300 rounded-lg"
+                              value={fusionForm.toChain}
+                              onChange={(e) => setFusionForm({...fusionForm, toChain: e.target.value})}
+                            >
+                              <option value="Etherlink">Etherlink</option>
+                              <option value="Ethereum">Ethereum</option>
                             </select>
-                            <select className="w-full p-3 border border-gray-300 rounded-lg">
+                            <select 
+                              className="w-full p-3 border border-gray-300 rounded-lg"
+                              value={fusionForm.toToken}
+                              onChange={(e) => setFusionForm({...fusionForm, toToken: e.target.value})}
+                            >
                               <option value="USDC">USDC</option>
                               <option value="USDT">USDT</option>
                               <option value="DAI">DAI</option>
+                              <option value="ETH">ETH</option>
                               <option value="WETH">WETH</option>
                             </select>
                             <Input
@@ -1976,6 +2207,7 @@ export default function Swap() {
                               placeholder="Amount (estimated)"
                               className="w-full"
                               readOnly
+                              value={fusionQuote ? fusionQuote.toAmount : ''}
                             />
                           </div>
                         </div>
@@ -1988,7 +2220,15 @@ export default function Swap() {
                           {[0.5, 1, 2, 5].map((slippage) => (
                             <button
                               key={slippage}
-                              className="px-3 py-1 rounded-md text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200"
+                              onClick={() => {
+                                console.log('Slippage selected:', slippage);
+                                setFusionForm({...fusionForm, slippage: slippage});
+                              }}
+                              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                                fusionForm.slippage === slippage
+                                  ? 'bg-blue-500 text-white'
+                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                              }`}
                             >
                               {slippage}%
                             </button>
@@ -1996,15 +2236,78 @@ export default function Swap() {
                         </div>
                       </div>
 
+                      {/* Wallet Address Field */}
+                      <div className="mt-6">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Wallet Address</label>
+                        <Input
+                          type="text"
+                          placeholder="0x..."
+                          className="w-full"
+                          value={fusionForm.walletAddress}
+                          onChange={(e) => {
+                            console.log('Wallet address changed:', e.target.value);
+                            setFusionForm({...fusionForm, walletAddress: e.target.value});
+                          }}
+                        />
+                      </div>
+
+                      {/* Quote Display */}
+                      {fusionQuote && (
+                        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                          <h4 className="font-semibold text-gray-900 mb-3">Fusion Quote</h4>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">You'll receive:</span>
+                              <span className="font-medium">{fusionQuote.toAmount} {fusionQuote.toToken}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Price impact:</span>
+                              <span className="font-medium">{fusionQuote.priceImpact}%</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Gas estimate:</span>
+                              <span className="font-medium">{fusionQuote.gasEstimate} gas</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Route:</span>
+                              <span className="font-medium">{fusionQuote.route}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Bridge fee:</span>
+                              <span className="font-medium">{fusionQuote.bridgeFee}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Estimated time:</span>
+                              <span className="font-medium">{fusionQuote.estimatedTime}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Action Buttons */}
                       <div className="mt-8 flex space-x-4">
-                        <Button className="flex-1 bg-purple-600 hover:bg-purple-700">
-                          <div className="flex items-center space-x-2">
-                            <Sparkles className="w-4 h-4" />
-                            <span>Get 1inch Fusion+ Quote</span>
-                          </div>
+                        <Button 
+                          className="flex-1 bg-purple-600 hover:bg-purple-700"
+                          onClick={getFusionQuote}
+                          disabled={isGettingFusionQuote || !fusionForm.fromAmount || !fusionForm.walletAddress}
+                        >
+                          {isGettingFusionQuote ? (
+                            <div className="flex items-center space-x-2">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                              <span>Getting Quote...</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center space-x-2">
+                              <Sparkles className="w-4 h-4" />
+                              <span>Get 1inch Fusion+ Quote</span>
+                            </div>
+                          )}
                         </Button>
-                        <Button className="flex-1 bg-green-600 hover:bg-green-700">
+                        <Button 
+                          className="flex-1 bg-green-600 hover:bg-green-700"
+                          onClick={executeFusionSwap}
+                          disabled={!fusionQuote}
+                        >
                           <div className="flex items-center space-x-2">
                             <ArrowUpDown className="w-4 h-4" />
                             <span>Execute Swap</span>

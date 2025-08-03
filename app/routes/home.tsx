@@ -1,7 +1,7 @@
 import { Navbar } from "components/Navbar";
 import { Card, CardContent } from "components/ui/card";
 import { useState, useEffect } from "react";
-import { TrendingUp, DollarSign, CreditCard, Activity, Clock, AlertCircle } from "lucide-react";
+import { TrendingUp, DollarSign, CreditCard, Activity, Clock, AlertCircle, Sparkles, ArrowRight } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface FinancialData {
@@ -250,6 +250,130 @@ export default function Home() {
       </div>
 
 
+
+      {/* Trading Integration Section */}
+      <div className="py-20 bg-gray-50">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">DeFi Trading Integration</h2>
+            <p className="text-lg text-gray-600">Connect your traditional finances with DeFi opportunities</p>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Trading Opportunities */}
+            <Card className="border border-gray-200 bg-white">
+              <CardContent className="p-6">
+                <div className="flex items-center mb-4">
+                  <div className="bg-purple-500 p-2 rounded-lg mr-3">
+                    <Sparkles className="h-5 w-5 text-white" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900">Trading Opportunities</h3>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <div className="font-medium text-gray-900">ETH → USDC</div>
+                      <div className="text-sm text-gray-600">Portfolio rebalancing</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-medium text-green-600">+2.3%</div>
+                      <div className="text-xs text-gray-500">Expected gain</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <div className="font-medium text-gray-900">USDT → BTC</div>
+                      <div className="text-sm text-gray-600">Diversification</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-medium text-green-600">+1.8%</div>
+                      <div className="text-xs text-gray-500">Expected gain</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <button 
+                    onClick={() => window.location.href = '/swap'}
+                    className="w-full flex items-center justify-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    <span>View All Opportunities</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Portfolio Impact */}
+            <Card className="border border-gray-200 bg-white">
+              <CardContent className="p-6">
+                <div className="flex items-center mb-4">
+                  <div className="bg-blue-500 p-2 rounded-lg mr-3">
+                    <TrendingUp className="h-5 w-5 text-white" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900">Portfolio Impact</h3>
+                </div>
+                <div className="space-y-4">
+                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                    <div className="text-2xl font-bold text-blue-600">$12,450</div>
+                    <div className="text-sm text-blue-700">Current Portfolio Value</div>
+                  </div>
+                  <div className="text-center p-4 bg-green-50 rounded-lg">
+                    <div className="text-2xl font-bold text-green-600">+$890</div>
+                    <div className="text-sm text-green-700">Potential from DeFi</div>
+                  </div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="text-sm text-gray-600 text-center">
+                    Based on your risk profile and current holdings
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Recent Activity */}
+            <Card className="border border-gray-200 bg-white">
+              <CardContent className="p-6">
+                <div className="flex items-center mb-4">
+                  <div className="bg-green-500 p-2 rounded-lg mr-3">
+                    <Activity className="h-5 w-5 text-white" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium text-gray-900">ETH Swap</div>
+                      <div className="text-sm text-gray-600">2 hours ago</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-medium text-green-600">+$45.20</div>
+                      <div className="text-xs text-gray-500">Profit</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium text-gray-900">USDC → USDT</div>
+                      <div className="text-sm text-gray-600">1 day ago</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-medium text-gray-600">$1,200</div>
+                      <div className="text-xs text-gray-500">Amount</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <button 
+                    onClick={() => window.location.href = '/swap'}
+                    className="w-full text-center text-purple-600 hover:text-purple-700 font-medium"
+                  >
+                    View Trading History
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
 
       {/* Charts Section */}
       {financialData && (

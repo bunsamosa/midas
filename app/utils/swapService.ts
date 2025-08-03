@@ -2,36 +2,46 @@ import { getOneInchAPI, OneInchToken, OneInchQuote, OneInchSwap, OneInchBalance 
 import { ethers } from 'ethers';
 
 export interface SwapRequest {
-  fromChainId: number;
-  toChainId: number;
-  fromTokenAddress: string;
-  toTokenAddress: string;
+  fromToken: string;
+  toToken: string;
+  fromChain: number;
+  toChain: number;
   amount: string;
   fromAddress: string;
   slippage?: number;
-  fee?: number;
 }
 
 export interface SwapResult {
   success: boolean;
   txHash?: string;
   error?: string;
-  quote?: OneInchQuote;
-  swap?: OneInchSwap;
+  swapData?: OneInchSwap;
+  quoteData?: OneInchQuote;
 }
 
 export interface TokenPrice {
   symbol: string;
   price: number;
   change24h: number;
+  marketCap: number;
   volume24h: number;
 }
 
 export interface WalletPortfolio {
-  address: string;
-  balances: OneInchBalance[];
-  totalValueUSD: number;
-  chains: number[];
+  totalValue: number;
+  tokens: Array<{
+    token: OneInchToken;
+    balance: string;
+    value: number;
+    percentage: number;
+  }>;
+}
+
+export interface MarketData {
+  totalVolume24h: number;
+  totalTvl: number;
+  activeProtocols: number;
+  topTokens: OneInchToken[];
 }
 
 class SwapService {
@@ -70,175 +80,162 @@ class SwapService {
 
   // Price Feeds
   async getTokenPrices(chainId: number, tokenAddresses: string[]): Promise<Record<string, number>> {
+    if (!this.checkAPI()) return {};
+    
     try {
-      return await this.api.getPrices(chainId, tokenAddresses);
+      return await this.api!.getPrices(chainId, tokenAddresses);
     } catch (error) {
       console.error('Error fetching token prices:', error);
       return {};
     }
   }
 
-  async getTokenPriceHistory(
-    chainId: number,
-    tokenAddress: string,
-    period: '1h' | '24h' | '7d' | '30d' = '24h'
-  ): Promise<Array<{ timestamp: number; price: number }>> {
+  async getTokenPriceHistory(chainId: number, tokenAddress: string, days: number = 30): Promise<Array<{ timestamp: number; price: number; }>> {
+    if (!this.checkAPI()) return [];
+    
     try {
-      // This would integrate with 1inch's price history API
-      // For now, return mock data
-      const now = Date.now();
-      const data = [];
-      const interval = period === '1h' ? 60000 : period === '24h' ? 3600000 : period === '7d' ? 86400000 : 86400000;
-      
-      for (let i = 0; i < 24; i++) {
-        data.push({
-          timestamp: now - (i * interval),
-          price: Math.random() * 1000 + 100, // Mock price
-        });
-      }
-      
-      return data.reverse();
+      const to = Math.floor(Date.now() / 1000);
+      const from = to - (days * 24 * 60 * 60);
+      return await this.api!.getTokenPriceHistory(chainId, tokenAddress, from, to, '1d');
     } catch (error) {
-      console.error('Error fetching price history:', error);
+      console.error('Error fetching token price history:', error);
       return [];
     }
   }
 
-  // Classic Swap (DEX Aggregation)
+  // Classic Swap
   async getSwapQuote(request: SwapRequest): Promise<OneInchQuote | null> {
+    if (!this.checkAPI()) return null;
+    
     try {
-      return await this.api.getQuote(
-        request.fromChainId,
-        request.fromTokenAddress,
-        request.toTokenAddress,
-        request.amount,
-        request.fee
+      return await this.api!.getQuote(
+        request.fromChain,
+        request.fromToken,
+        request.toToken,
+        request.amount
       );
     } catch (error) {
-      console.error('Error getting swap quote:', error);
+      console.error('Error fetching swap quote:', error);
       return null;
     }
   }
 
   async executeSwap(request: SwapRequest): Promise<SwapResult> {
+    if (!this.checkAPI()) {
+      return { success: false, error: '1inch API not available' };
+    }
+    
     try {
-      // Get quote first
-      const quote = await this.getSwapQuote(request);
-      if (!quote) {
-        return { success: false, error: 'Failed to get quote' };
-      }
-
-      // Get swap transaction
-      const swap = await this.api.getSwap(
-        request.fromChainId,
-        request.fromTokenAddress,
-        request.toTokenAddress,
+      const swapData = await this.api!.getSwap(
+        request.fromChain,
+        request.fromToken,
+        request.toToken,
         request.amount,
         request.fromAddress,
-        request.slippage || 1,
-        request.fee
+        request.slippage || 1
       );
 
       return {
         success: true,
-        quote,
-        swap,
+        swapData,
+        txHash: undefined
       };
     } catch (error) {
       console.error('Error executing swap:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
     }
   }
 
   // Cross-chain Swap (Fusion+)
   async getCrossChainQuote(request: SwapRequest): Promise<any> {
+    if (!this.checkAPI()) return null;
+    
     try {
-      return await this.api.getCrossChainQuote(
-        request.fromChainId,
-        request.toChainId,
-        request.fromTokenAddress,
-        request.toTokenAddress,
+      return await this.api!.getCrossChainQuote(
+        request.fromChain,
+        request.toChain,
+        request.fromToken,
+        request.toToken,
         request.amount,
         request.fromAddress
       );
     } catch (error) {
-      console.error('Error getting cross-chain quote:', error);
+      console.error('Error fetching cross-chain quote:', error);
       return null;
     }
   }
 
-  async executeCrossChainSwap(
-    quoteId: string,
-    fromAddress: string,
-    signature: string
-  ): Promise<SwapResult> {
+  async executeCrossChainSwap(quoteId: string, fromAddress: string, signature: string): Promise<SwapResult> {
+    if (!this.checkAPI()) {
+      return { success: false, error: '1inch API not available' };
+    }
+    
     try {
-      const result = await this.api.createCrossChainSwap(quoteId, fromAddress, signature);
+      const swapData = await this.api!.createCrossChainSwap(quoteId, fromAddress, signature);
+      
       return {
         success: true,
-        txHash: result.txHash,
+        swapData,
+        txHash: undefined
       };
     } catch (error) {
       console.error('Error executing cross-chain swap:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
     }
   }
 
-  // Wallet Balances
-  async getWalletBalances(chainId: number, address: string): Promise<OneInchBalance[]> {
+  // Wallet Management
+  async getWalletBalances(chainId: number, walletAddress: string): Promise<OneInchBalance[]> {
+    if (!this.checkAPI()) return [];
+    
     try {
-      return await this.api.getWalletBalances(chainId, address);
+      return await this.api!.getWalletBalances(chainId, walletAddress);
     } catch (error) {
       console.error('Error fetching wallet balances:', error);
       return [];
     }
   }
 
-  async getMultiChainPortfolio(addresses: string[]): Promise<WalletPortfolio[]> {
+  async getMultiChainPortfolio(walletAddress: string, chains: number[]): Promise<Record<number, WalletPortfolio>> {
+    if (!this.checkAPI()) return {};
+    
     try {
-      const supportedChains = await this.api.getSupportedChains();
-      const portfolios: WalletPortfolio[] = [];
-
-      for (const address of addresses) {
-        const balances: OneInchBalance[] = [];
-        const chains: number[] = [];
-        let totalValueUSD = 0;
-
-        // Get balances for each supported chain
-        for (const chain of supportedChains.slice(0, 5)) { // Limit to first 5 chains for performance
-          try {
-            const chainBalances = await this.getWalletBalances(chain.chainId, address);
-            balances.push(...chainBalances);
-            chains.push(chain.chainId);
-          } catch (error) {
-            console.warn(`Failed to get balances for chain ${chain.chainId}:`, error);
-          }
-        }
-
-        // Calculate total value (this would require price data)
-        portfolios.push({
-          address,
-          balances,
-          totalValueUSD,
-          chains,
-        });
+      const portfolio: Record<number, WalletPortfolio> = {};
+      
+      for (const chainId of chains) {
+        const balances = await this.api!.getWalletBalances(chainId, walletAddress);
+        const totalValue = balances.reduce((sum, balance) => sum + balance.balanceUsd, 0);
+        
+        portfolio[chainId] = {
+          totalValue,
+          tokens: balances.map(balance => ({
+            token: balance.token,
+            balance: balance.balance,
+            value: balance.balanceUsd,
+            percentage: totalValue > 0 ? (balance.balanceUsd / totalValue) * 100 : 0,
+          }))
+        };
       }
-
-      return portfolios;
+      
+      return portfolio;
     } catch (error) {
       console.error('Error fetching multi-chain portfolio:', error);
-      return [];
+      return {};
     }
   }
 
   // Gas Estimation
-  async getGasPrice(chainId: number): Promise<{
-    fast: number;
-    standard: number;
-    slow: number;
-  } | null> {
+  async getGasPrice(chainId: number): Promise<{ fast: number; standard: number; slow: number; } | null> {
+    if (!this.checkAPI()) return null;
+    
     try {
-      return await this.api.getGasPrice(chainId);
+      return await this.api!.getGasPrice(chainId);
     } catch (error) {
       console.error('Error fetching gas price:', error);
       return null;
@@ -246,14 +243,11 @@ class SwapService {
   }
 
   // Transaction Management
-  async getTransactionStatus(txHash: string): Promise<{
-    status: 'pending' | 'confirmed' | 'failed';
-    blockNumber?: number;
-    gasUsed?: number;
-    effectiveGasPrice?: string;
-  } | null> {
+  async getTransactionStatus(txHash: string): Promise<{ status: 'pending' | 'confirmed' | 'failed'; blockNumber?: number; gasUsed?: number; effectiveGasPrice?: string; } | null> {
+    if (!this.checkAPI()) return null;
+    
     try {
-      return await this.api.getTransactionStatus(txHash);
+      return await this.api!.getTransactionStatus(txHash);
     } catch (error) {
       console.error('Error fetching transaction status:', error);
       return null;
@@ -261,14 +255,11 @@ class SwapService {
   }
 
   // Limit Orders
-  async getLimitOrders(
-    chainId: number,
-    makerAsset: string,
-    takerAsset: string,
-    limit: number = 20
-  ): Promise<any[]> {
+  async getLimitOrders(chainId: number, makerAsset: string, takerAsset: string, limit: number = 20): Promise<any[]> {
+    if (!this.checkAPI()) return [];
+    
     try {
-      return await this.api.getLimitOrders(chainId, makerAsset, takerAsset, limit);
+      return await this.api!.getLimitOrders(chainId, makerAsset, takerAsset, limit);
     } catch (error) {
       console.error('Error fetching limit orders:', error);
       return [];
@@ -276,8 +267,10 @@ class SwapService {
   }
 
   async createLimitOrder(chainId: number, order: any): Promise<{ orderHash: string } | null> {
+    if (!this.checkAPI()) return null;
+    
     try {
-      return await this.api.createLimitOrder(chainId, order);
+      return await this.api!.createLimitOrder(chainId, order);
     } catch (error) {
       console.error('Error creating limit order:', error);
       return null;
@@ -285,59 +278,42 @@ class SwapService {
   }
 
   // Market Data
-  async getMarketOverview(chainId: number): Promise<{
-    totalVolume24h: number;
-    totalTrades24h: number;
-    topTokens: TokenPrice[];
-  }> {
+  async getMarketOverview(chainId: number): Promise<MarketData | null> {
+    if (!this.checkAPI()) return null;
+    
     try {
-      // This would integrate with 1inch's market data APIs
-      // For now, return mock data
+      const [overview, topTokens] = await Promise.all([
+        this.api!.getMarketOverview(chainId),
+        this.api!.getTopTokens(chainId, 20)
+      ]);
+      
       return {
-        totalVolume24h: 1500000000, // $1.5B
-        totalTrades24h: 125000,
-        topTokens: [
-          { symbol: 'ETH', price: 2500, change24h: 2.5, volume24h: 500000000 },
-          { symbol: 'USDC', price: 1, change24h: 0, volume24h: 300000000 },
-          { symbol: 'USDT', price: 1, change24h: -0.1, volume24h: 250000000 },
-        ],
+        ...overview,
+        topTokens
       };
     } catch (error) {
       console.error('Error fetching market overview:', error);
-      return {
-        totalVolume24h: 0,
-        totalTrades24h: 0,
-        topTokens: [],
-      };
+      return null;
     }
   }
 
   // Protocol Information
-  async getSupportedProtocols(chainId: number): Promise<Array<{
-    id: string;
-    title: string;
-    description: string;
-    logoURI: string;
-  }>> {
+  async getSupportedProtocols(chainId: number): Promise<Array<{ id: string; title: string; description: string; logoURI: string; }>> {
+    if (!this.checkAPI()) return [];
+    
     try {
-      return await this.api.getProtocols(chainId);
+      return await this.api!.getProtocols(chainId);
     } catch (error) {
-      console.error('Error fetching protocols:', error);
+      console.error('Error fetching supported protocols:', error);
       return [];
     }
   }
 
-  async getSupportedChains(): Promise<Array<{
-    chainId: number;
-    name: string;
-    nativeCurrency: {
-      name: string;
-      symbol: string;
-      decimals: number;
-    };
-  }>> {
+  async getSupportedChains(): Promise<Array<{ chainId: number; name: string; nativeCurrency: { name: string; symbol: string; decimals: number; }; }>> {
+    if (!this.checkAPI()) return [];
+    
     try {
-      return await this.api.getSupportedChains();
+      return await this.api!.getSupportedChains();
     } catch (error) {
       console.error('Error fetching supported chains:', error);
       return [];
@@ -345,13 +321,14 @@ class SwapService {
   }
 
   // Health Check
-  async checkAPIHealth(): Promise<boolean> {
+  async checkAPIHealth(): Promise<{ status: 'ok' | 'error'; timestamp: number; } | null> {
+    if (!this.checkAPI()) return null;
+    
     try {
-      const health = await this.api.getHealthStatus();
-      return health.status === 'ok';
+      return await this.api!.getHealthStatus();
     } catch (error) {
-      console.error('API health check failed:', error);
-      return false;
+      console.error('Error checking API health:', error);
+      return null;
     }
   }
 
@@ -360,6 +337,7 @@ class SwapService {
     try {
       return ethers.formatUnits(amount, decimals);
     } catch (error) {
+      console.error('Error formatting token amount:', error);
       return '0';
     }
   }
@@ -368,51 +346,66 @@ class SwapService {
     try {
       return ethers.parseUnits(amount, decimals).toString();
     } catch (error) {
+      console.error('Error parsing token amount:', error);
       return '0';
     }
   }
 
-  calculateSlippage(amount: string, slippagePercent: number): string {
-    try {
-      const amountBN = ethers.BigNumber.from(amount);
-      const slippageBN = amountBN.mul(slippagePercent).div(100);
-      return amountBN.sub(slippageBN).toString();
-    } catch (error) {
-      return amount;
-    }
+  calculateSlippage(priceImpact: number): number {
+    // Calculate recommended slippage based on price impact
+    if (priceImpact < 1) return 1;
+    if (priceImpact < 5) return 2;
+    if (priceImpact < 10) return 5;
+    return 10;
   }
 
   // Batch Operations
-  async getMultipleQuotes(
-    chainId: number,
-    requests: Array<{
-      fromTokenAddress: string;
-      toTokenAddress: string;
-      amount: string;
-    }>
-  ): Promise<OneInchQuote[]> {
+  async getMultipleQuotes(chainId: number, requests: Array<{ fromTokenAddress: string; toTokenAddress: string; amount: string; }>): Promise<OneInchQuote[]> {
+    if (!this.checkAPI()) return [];
+    
     try {
-      return await this.api.getMultipleQuotes(chainId, requests);
+      return await this.api!.getMultipleQuotes(chainId, requests);
     } catch (error) {
       console.error('Error fetching multiple quotes:', error);
       return [];
     }
   }
 
-  async getMultipleBalances(
-    chainId: number,
-    walletAddresses: string[]
-  ): Promise<Record<string, OneInchBalance[]>> {
+  async getMultipleBalances(chainId: number, walletAddresses: string[]): Promise<Record<string, OneInchBalance[]>> {
+    if (!this.checkAPI()) return {};
+    
     try {
-      return await this.api.getMultipleBalances(chainId, walletAddresses);
+      return await this.api!.getMultipleBalances(chainId, walletAddresses);
     } catch (error) {
       console.error('Error fetching multiple balances:', error);
       return {};
     }
   }
+
+  // Risk Assessment
+  async getTokenRiskScore(chainId: number, tokenAddress: string): Promise<{ riskScore: number; riskLevel: 'low' | 'medium' | 'high'; factors: string[]; } | null> {
+    if (!this.checkAPI()) return null;
+    
+    try {
+      return await this.api!.getTokenRiskScore(chainId, tokenAddress);
+    } catch (error) {
+      console.error('Error fetching token risk score:', error);
+      return null;
+    }
+  }
+
+  async getSwapRiskAssessment(chainId: number, fromTokenAddress: string, toTokenAddress: string, amount: string): Promise<{ riskScore: number; warnings: string[]; recommendations: string[]; } | null> {
+    if (!this.checkAPI()) return null;
+    
+    try {
+      return await this.api!.getSwapRiskAssessment(chainId, fromTokenAddress, toTokenAddress, amount);
+    } catch (error) {
+      console.error('Error fetching swap risk assessment:', error);
+      return null;
+    }
+  }
 }
 
-// Create singleton instance
 let swapServiceInstance: SwapService | null = null;
 
 export function getSwapService(): SwapService {
@@ -422,5 +415,4 @@ export function getSwapService(): SwapService {
   return swapServiceInstance;
 }
 
-export { SwapService };
-export type { SwapRequest, SwapResult, TokenPrice, WalletPortfolio }; 
+export { SwapService }; 

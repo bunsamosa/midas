@@ -2,6 +2,7 @@ import { Button } from "components/ui/button";
 import { LogOut } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
+import { Star } from "lucide-react";
 
 export function Navbar() {
   const { handleLogOut } = useDynamicContext();
